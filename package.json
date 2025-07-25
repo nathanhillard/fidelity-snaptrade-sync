@@ -1,0 +1,25 @@
+{
+  "name": "fidelity-snaptrade-sync",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nathanhillard/fidelity-snaptrade-sync.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nathanhillard/fidelity-snaptrade-sync/issues"
+  },
+  "homepage": "https://github.com/nathanhillard/fidelity-snaptrade-sync#readme",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "googleapis": "^154.0.0",
+    "snaptrade-typescript-sdk": "^9.0.119"
+  }
+}
