@@ -55,77 +55,57 @@ async function openPortal() {
 
 // 5️⃣ Daily: fetch positions & write to your sheet
 async function sync() {
-  try {
-    const sheets = await authSheets();
+  const sheets = await authSheets();
+  const spreadsheetId = process.env.SHEET_ID.trim();
 
-// debug: list all sheet names
-const meta = await sheets.spreadsheets.get({
-  spreadsheetId: process.env.SHEET_ID.trim(),
-});
-const titles = meta.data.sheets.map(s => s.properties.title);
-console.log('📑 Available tabs:', titles);
+  // 1) Write a "Last Updated" timestamp into A1
+  const now = new Date().toLocaleString('en-US', {
+    timeZone: 'America/New_York',   // your local time
+    month: 'numeric', day: 'numeric',
+    year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: 'FidelityRaw!A1',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [['Last Updated', now]] }
+  });
 
+  // 2) Clear only the old data (leave row 1 intact)
+  await sheets.spreadsheets.values.clear({
+    spreadsheetId,
+    range: 'FidelityRaw!A2:Z'
+  });
 
-    // ▼ list your linked accounts
-    const accountsResp = await snap.accountInformation.listUserAccounts({
-      userId:     process.env.SNAPTRADE_USER_ID.trim(),
-      userSecret: process.env.SNAPTRADE_USER_SECRET.trim(),
-    });
-    const acctId = accountsResp.data[0].id;
-    console.log('🔍 Found account ID:', acctId);
+  // 3) Fetch your positions as before…
+  const accountsResp = await snap.accountInformation.listUserAccounts({
+    userId:     process.env.SNAPTRADE_USER_ID.trim(),
+    userSecret: process.env.SNAPTRADE_USER_SECRET.trim(),
+  });
+  const acctId = accountsResp.data[0].id;
 
-        // ▼ fetch positions for that account
-const posResp = await snap.accountInformation.getUserAccountPositions({
-  userId:     process.env.SNAPTRADE_USER_ID.trim(),
-  userSecret: process.env.SNAPTRADE_USER_SECRET.trim(),
-  accountId:  acctId,
-});
+  const positions = await snap.accountInformation.getUserAccountPositions({
+    userId:     process.env.SNAPTRADE_USER_ID.trim(),
+    userSecret: process.env.SNAPTRADE_USER_SECRET.trim(),
+    accountId:  acctId,
+  }).then(r => r.data);
 
-// ▼ The SDK returns the array directly in resp.data
-const positions = posResp.data;  
+  // 4) Map into rows: [Ticker, Qty, MarketValue]
+  const rows = positions.map(p => [
+    p.symbol.symbol.symbol,
+    p.units,
+    p.price * p.units
+  ]);
 
-// DEBUG: dump the first 3 positions so we can inspect their structure
-console.log('🔎 Position sample:', JSON.stringify(positions.slice(0,3), null, 2));
+  // 5) Write the new data starting in row 2
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: 'FidelityRaw!A2',
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: rows }
+  });
 
-// ▼ build rows: [Ticker, Qty, MarketValue]
-const rows = positions.map(p => [
-  // ticker is nested under symbol.symbol.symbol
-  p.symbol.symbol.symbol,                
-  // number of shares is in `units`
-  p.units,                               
-  // compute market value = price × units
-  p.price * p.units                      
-]);
-
-
-console.log('📝 About to write rows:', rows);
-
-const existing = await sheets.spreadsheets.values.get({
-  spreadsheetId: process.env.SHEET_ID.trim(),
-  range: 'FidelityRaw!A1:Z10'
-});
-console.log('🔍 Before clear, sheet had:', existing.data.values);
-
-
-    await sheets.spreadsheets.values.clear({
-  spreadsheetId: process.env.SHEET_ID.trim(),
-  range: 'FidelityRaw!A:Z'
-});
-
-
-// then write starting at A1
-await sheets.spreadsheets.values.update({
-  spreadsheetId:   process.env.SHEET_ID.trim(),
-  range:           'FidelityRaw!A1',
-  valueInputOption:'USER_ENTERED',
-  requestBody:     { values: rows }
-});
-
-
-    console.log(`✅ Synced ${rows.length} positions.`);
-  } catch (err) {
-    console.error('❌ sync error:', err);
-  }
+  console.log(`✅ Synced ${rows.length} positions at ${now}.`);
 }
 
 // 6️⃣ Dispatch based on command‑line argument
