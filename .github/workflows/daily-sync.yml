@@ -1,0 +1,31 @@
+name: Daily Fidelity Sync
+
+on:
+  schedule:
+    # runs every day at 01:00 UTC (9 PM US‑Eastern)
+    - cron: '0 1 * * *'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run sync script
+        run: node index.js
+        env:
+          SNAPTRADE_CLIENT_ID:    ${{ secrets.SNAPTRADE_CLIENT_ID }}
+          SNAPTRADE_CONSUMER_KEY: ${{ secrets.SNAPTRADE_CONSUMER_KEY }}
+          SNAPTRADE_USER_ID:      ${{ secrets.SNAPTRADE_USER_ID }}
+          SNAPTRADE_USER_SECRET:  ${{ secrets.SNAPTRADE_USER_SECRET }}
+          SHEET_ID:               ${{ secrets.SHEET_ID }}
