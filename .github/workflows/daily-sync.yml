@@ -16,6 +16,12 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
+      - name: Decode service account key
+	run: |
+		echo "${{ secrets.GOOGLE_CREDENTIALS_BASE64 }}" \
+		| base64 --decode > service-account.json
+	shell: bash
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
