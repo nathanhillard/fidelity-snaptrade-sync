@@ -1,8 +1,11 @@
 name: Daily Fidelity Sync
 
 on:
+  # Allow manual runs from the Actions UI
+  workflow_dispatch:
+
+  # Also run on schedule every day at 01:00 UTC (9 PM US‑Eastern)
   schedule:
-    # runs every day at 01:00 UTC (9 PM US‑Eastern)
     - cron: '0 1 * * *'
 
 jobs:
